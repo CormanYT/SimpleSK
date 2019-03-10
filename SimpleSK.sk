@@ -1,0 +1,114 @@
+#STRING CASE
+
+function lowercase(t: string, a: integer, b: integer) :: string:
+    set {_count} to 0
+    set {_s::*} to {_t} split at ""
+    loop {_s::*}:
+        increase {_count} by 1
+        if {_count} is greater than ({_a} - 1):
+            if {_count} is less than ({_b} + 1):
+                set {_this::%loop-index%} to first character of loop-value in lower case
+            else:
+                set {_this::%loop-index%} to loop-value
+        else:
+            set {_this::%loop-index%} to loop-value
+    set {_result} to ""
+    loop {_this::*}:
+        set {_result} to "%{_result}%%loop-value%"
+    return {_result}
+function capitalize(t: string, a: integer, b: integer) :: string:
+    set {_count} to 0
+    set {_s::*} to {_t} split at ""
+    loop {_s::*}:
+        increase {_count} by 1
+        if {_count} is greater than ({_a} - 1):
+            if {_count} is less than ({_b} + 1):
+                set {_this::%loop-index%} to first character of loop-value in upper case
+            else:
+                set {_this::%loop-index%} to loop-value
+        else:
+            set {_this::%loop-index%} to loop-value
+    set {_result} to ""
+    loop {_this::*}:
+        set {_result} to "%{_result}%%loop-value%"
+    return {_result}
+
+#LIST
+
+function indexContains(list: objects, check: object) :: object:
+    loop {_list::*}:
+        if loop-value is {_check}:
+            return loop-index
+    return false  
+function inList(s: object, a: integer, b: integer) :: strings:
+    set {_count} to 0
+    loop {_s::*}:
+        increase {_count} by 1
+        {_count} is greater than ({_a} - 1)
+        {_count} is less than ({_b} + 1)
+        set {_result::%loop-index%} to loop-value
+    return {_result::*}
+
+#SORTING
+
+function sortIndexLowest(s: strings) :: strings:
+    set {_count} to 0 
+    loop size of {_s::*} times:
+        increase {_count} by 1
+        delete {_lowest}
+        loop {_s::*}:
+            set {_this::*} to loop-value-2 split at "-"
+            size of {_this::*} is 2
+            set {_numb} to {_this::2} parsed as a number
+            set {_low::*} to {_lowest} split at "-"
+            set {_number} to {_low::2} parsed as a number
+            if {_lowest} isn't set:
+                set {_lowest} to loop-value-2
+            else if {_numb} is less than {_number}:
+                set {_lowest} to loop-value-2
+        add {_lowest} to {_sorted::*}
+        remove {_lowest} from {_s::*}
+    return {_sorted::*}
+function sortIndexHighest(s: strings) :: strings:
+    set {_count} to 0 
+    loop size of {_s::*} times:
+        increase {_count} by 1
+        delete {_highest}
+        loop {_s::*}:
+            set {_this::*} to loop-value-2 split at "-"
+            set {_numb} to {_this::2} parsed as a number
+            set {_high::*} to {_highest} split at "-"
+            set {_number} to {_high::2} parsed as a number
+            if {_highest} isn't set:
+                set {_highest} to loop-value-2
+            else if {_numb} is greater than {_number}:
+                set {_highest} to loop-value-2
+        add {_highest} to {_sorted::*}
+        remove {_highest} from {_s::*}
+    return {_sorted::*}
+function sortLowest(i: numbers) :: numbers:
+    set {_count} to 0 
+    loop size of {_i::*} times:
+        increase {_count} by 1
+        delete {_lowest}
+        loop {_i::*}:
+            if {_lowest} isn't set:
+                set {_lowest} to loop-value-2
+            else if loop-value-2 is less than {_lowest}:
+                set {_lowest} to loop-value-2
+        add {_lowest} to {_sorted::*}
+        remove {_lowest} from {_i::*}
+    return {_sorted::*}
+function sortHighest(i: numbers) :: numbers:
+    set {_count} to 0 
+    loop size of {_i::*} times:
+        increase {_count} by 1
+        delete {_highest}
+        loop {_i::*}:
+            if {_highest} isn't set:
+                set {_highest} to loop-value-2
+            else if loop-value-2 is greater than {_highest}:
+                set {_highest} to loop-value-2
+        add {_highest} to {_sorted::*}
+        remove {_highest} from {_i::*}
+    return {_sorted::*}
