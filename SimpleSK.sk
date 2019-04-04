@@ -1,114 +1,619 @@
-#STRING CASE
+#IMPORT
 
-function lowercase(t: string, a: integer, b: integer) :: string:
-    set {_count} to 0
-    set {_s::*} to {_t} split at ""
-    loop {_s::*}:
-        increase {_count} by 1
-        if {_count} is greater than ({_a} - 1):
-            if {_count} is less than ({_b} + 1):
-                set {_this::%loop-index%} to first character of loop-value in lower case
-            else:
-                set {_this::%loop-index%} to loop-value
+import:
+    org.bukkit.event.player.PlayerLoginEvent 
+    java.net.InetAddress
+    java.lang.Exception
+    java.lang.Long
+    org.bukkit.command.Command
+    org.bukkit.entity.Ageable
+    org.bukkit.attribute.Attribute
+    java.lang.Double
+    ch.njol.skript.variables.Variables
+
+#JOIN IP
+
+on PlayerLoginEvent:
+    set {_player} to event.getPlayer().getName()
+    set {_this} to event.getHostname().toString()
+    set {_person} to {_player} parsed as a offlineplayer
+    set {simpleSK::joinIP::%{_person}%::*} to {_this} split at ":"
+    set {_this} to event.getRealAddress()
+    set {simpleSK::realIP::%{_person}%} to "%{_this}%"
+expression (connect|join) (ip|address) of %player%:
+    get:
+        return "%{simpleSK::joinIP::%expression-1%::1}%:%{simpleSK::joinIP::%expression-1%::2}%"
+expression port of %player%'s (address|ip):
+    get:
+        set {_this} to expression-1.getAddress()
+        return {_this}.getPort()
+expression (real|raw) (ip|address) of %player%:
+    get:
+        return {simpleSK::realIP::%expression-1%}
+expression host[](name|string) of %player%:
+    get:
+        set {_this} to expression-1.getAddress()
+        return {_this}.getHostString()
+        
+#PLAYER RELATED
+
+expression (client view distance of %player%|%player%'s client view distance):
+    get:
+        return expression-1.getClientViewDistance()
+expression bed[ ]spawn loc[ation] of %offlineplayer%:
+    get:
+        return expression-1.getBedSpawnLocation()
+effect set bed[]spawn loc[ation] of %offlineplayer% to %location%:
+    trigger:
+        expression-1.setBedSpawnLocation(expression-2)
+condition %offlineplayer% has (joined|played|been online|) (before|in the past) [on this server]:
+    check:
+        expression-1.hasPlayedBefore() is true
+        continue
+expression [when] %player% first (was witnessed|joined|played|logged on):
+    get:
+        return expression-1.getFirstPlayed()
+expression [when] %player% last (was witnessed|joined|played|logged on):
+    get:
+        return expression-1.getLastPlayed()
+
+#SERVER RELATED
+
+expression [get] [the] server:
+    get:
+        loop all entities:
+            {_serv} isn't set
+            set {_serv} to the server
+            exit 1 loop  
+        return {_serv}
+expression [all] operators:
+    get:
+        set {_this} to the server
+        return server.getOperators()
+condition [the] server is in hardcore [mode]:
+    check:
+        server.isHardcore() is true
+        continue
+        
+#MISK    
+        
+expression %object%'s java[ ]type:
+    get:
+        set {_this} to "%expression-1's class%"
+        set {_this::*} to {_this} split at "."
+        return last element of {_this::*}
+expression [total] (numb[er]|int[eger]) of var[iable]s:
+    get:
+        return Variables.numVariables()
+command /this:
+    trigger:
+        broadcast "%numb of vars%"
+
+#INET ADDRESS
+
+expression %string% as an inet[(-| )]address:
+    get:
+        set {_this} to InetAddress.getByName(expression-1)
+        return {_this}
+expression (proxy|vpn) (chance|score) of [ip] [address] %string%:
+    return type: object
+    get:
+        set {_this} to expression-1 as an inet-address
+        if {_this} isn't set:
+            return new Exception("Invalid address")
         else:
-            set {_this::%loop-index%} to loop-value
-    set {_result} to ""
-    loop {_this::*}:
-        set {_result} to "%{_result}%%loop-value%"
-    return {_result}
-function capitalize(t: string, a: integer, b: integer) :: string:
-    set {_count} to 0
-    set {_s::*} to {_t} split at ""
-    loop {_s::*}:
-        increase {_count} by 1
-        if {_count} is greater than ({_a} - 1):
-            if {_count} is less than ({_b} + 1):
-                set {_this::%loop-index%} to first character of loop-value in upper case
-            else:
-                set {_this::%loop-index%} to loop-value
+            set {_bad} to 0
+            if "%validOne(expression-1)%" is "true":
+                increase {_bad} by 1
+            if "%validTwo(expression-1)%" is "true":
+                increase {_bad} by 1
+            return "%{_bad}%/2"
+function validOne(s: string) :: boolean:
+    set {_one} to text from "http://api.stopforumspam.org/api?ip=%{_s}%" 
+    if {_one} contains "yes":
+        return true
+    return false
+function validTwo(s: string) :: boolean:
+    set {_two} to text from "http://proxycheck.io/v2/%{_s}%"
+    if {_two} contains "yes":
+        return true
+    else:
+        return false
+
+#QUESTS
+
+#start quest named "This" for player with goal {kills::%player%} = 5 to run 
+
+
+        
+#COOLDOWNS
+
+effect [force] end cooldown %string%:
+    trigger:
+        delete {simpleSK.cooldowns::start::%expression-1%}
+        delete {simpleSK.cooldowns::end::%expression-1%}
+effect start cooldown %string% for %timespan%:
+    trigger:
+        set {simpleSK.cooldowns::start::%expression-1%} to now
+        set {simpleSK.cooldowns::end::%expression-1%} to expression-2
+        wait expression-2
+        end cooldown expression-1
+condition cooldown %string% [exists]:
+    check:
+        {simpleSK.cooldowns::start::%expression-1%} is set
+        {simpleSK.cooldowns::end::%expression-1%} is set
+        continue
+expression time until [cooldown] %string% (expires|ends):
+    get:
+        cooldown expression-1 exists
+        set {_now} to now
+        set {_timespan} to {simpleSK.cooldowns::end::%expression-1%}
+        remove {_timespan} from {_now}
+        set {_remaining} to {_now}
+        return difference between {simpleSK.cooldowns::start::%expression-1%} and {_remaining} 
+expression [all] [(active|existing)] cooldowns:
+    get:
+        loop {simpleSK.cooldowns::start::*}:
+            add loop-index to {_list::*}
+        return {_list::*}   
+           
+            
+#ENTITY TAGS
+
+expression ([all [of]] %entity%'s tags|[all] tags of %entity%):
+    return type: strings
+    get:
+        return {simpleSK.tags::%expression-1's uuid%::*}
+expression tag %string% of %entity%:
+    return type: string
+    get:
+        if {simpleSK.tags::%expression-2's uuid%::%expression-1%} is set:
+            return {simpleSK.tags::%expression-2's uuid%::%expression-1%}
         else:
-            set {_this::%loop-index%} to loop-value
-    set {_result} to ""
-    loop {_this::*}:
-        set {_result} to "%{_result}%%loop-value%"
-    return {_result}
+            return "tag is invalid"
+effect set tag %string% of %entity% to %object%:
+    trigger:
+        expression-3 is a number or a text
+        set {simpleSK.tags::%expression-2's uuid%::%expression-1%} to expression-3
+effect increase tag %string% of %entity% by %number%:
+    trigger:
+        increase {simpleSK.tags::%expression-2's uuid%::%expression-1%} by expression-3
+effect remove %number% from tag %string% of %entity%:
+    trigger:
+        remove expression-1 from {simpleSK.tags::%expression-3's uuid%::%expression-2%}
+effect delete tag %string% of %entity%:
+    trigger:
+        delete {simpleSK.tags::%expression-2's uuid%::%expression-1%}
+on death:
+    delete {simpleSK.tags::%entity's uuid%::*}
+            
+
+#ENTITY BASED
+
+expression [all of] %entity%'s kills of [type] %entity types%:
+    return type: integer
+    get:
+        set {_result} to 0
+        loop expressions-2:
+            increase {_result} by {simpleSK.kills::%loop-value%::%expression-1's uuid%}
+        return {_result}
+expression [all of] %entity%'s deaths by [type] %entity types%:
+    return type: integer
+    get:
+        set {_result} to 0
+        loop expressions-2:
+            increase {_result} by {simpleSK.deaths::%loop-value%::%expression-1's uuid%}
+        return {_result}
+on death:
+    increase {simpleSK.kills::%victim's type%::%attacker's uuid%} by 1
+    increase {simpleSK.deaths::%attacker's type%::%victim's uuid%} by 1
+expression last (command|cmd) of %player%:
+    return type: string
+    get:
+        return {lastcmd::%expression-1's uuid%}     
+on command:
+    set {lastcmd::%player's uuid%} to complete command
+expression last (damager|attacker) [(of|[done ]by)] %entity%:
+    return type: entity
+    get:
+        if {lastdamager::%expression-1's uuid%} is set:
+            loop all entities:
+                if loop-entity's uuid is {lastdamager::%expression-1's uuid%}:
+                    set {_this} to loop-entity
+            if {_this} is set:
+                return {_this}
+            else:
+                return "entity no longer exists"
+        else:
+            return "no damager found"
+on damage:
+    attacker exists
+    set {lastdamager::%victim's uuid%} to attacker's uuid
+    
+#NUMBERS
+
+expression greatest %long%:
+    get:
+        return Long.highestOneBit(expression-1)
+expression remainder of %long% / %long%:
+    get:
+        return Long.remainderUnsigned(expression-1, expression-2)
+        
+        
 
 #LIST
 
-function indexContains(list: objects, check: object) :: object:
-    loop {_list::*}:
-        if loop-value is {_check}:
-            return loop-index
-    return false  
-function inList(s: object, a: integer, b: integer) :: strings:
+function inList(a: integer, b: integer, list: objects) :: objects:
     set {_count} to 0
-    loop {_s::*}:
+    loop {_list::*}:
         increase {_count} by 1
         {_count} is greater than ({_a} - 1)
         {_count} is less than ({_b} + 1)
-        set {_result::%loop-index%} to loop-value
-    return {_result::*}
+        add loop-value to {_result::*}
+    return {_result::*}    
+
+#STRING BASED
+
+expression %strings% as [a] [(single|sole)] (text|string):
+    return type: string
+    get:
+        set {_result} to ""
+        loop expressions-1:
+            set {_result} to "%{_result}%%loop-value%"        
+        return {_result}
+expression pairs of %string% %string% in %string%: 
+    return type: strings
+    get:
+        if expression-1 is expression-2:
+            return new Exception("Pair Arguments may not be the same thing!")
+        if expression-1.length() isn't 1:
+            return new Exception("Pair Arguments must both be one character long.")
+        if expression-2.length() isn't 1:
+            return new Exception("Pair Arguments must both be one character long.")
+        set {_count} to 0
+        set {_start} to 0
+        set {_end} to 0
+        set {_par} to 0
+        set {_pair} to 0
+        set {_in} to 0
+        set {_this::*} to expression-3 split at ""
+        loop {_this::*}:
+            increase {_count} by 1
+            if {_this::%{_count}%} is expression-1:
+                increase {_in} by 1
+                if {_in} is 1:
+                    set {_start} to {_count}
+            if {_this::%{_count}%} is expression-2:
+                {_in} is greater than 0
+                remove 1 from {_in}
+                {_in} is 0
+                set {_end} to {_count}
+                add 1 to {_start}
+                remove 1 from {_end}
+                set {_wow::*} to inList({_start}, {_end}, {_this::*})
+                set {_output} to {_wow::*} as a string
+                set {_in} to 0
+                set {_start} to 0
+                set {_end} to 0
+                add {_output} to {_result::*}
+        return {_result::*}
+                
+expression %long% in binary:
+    get:
+        return Long.toBinaryString(expression-1)
+expression [(string|text)] %string% compared to [(string|text)] %string%:
+    get:
+        return expression-1.compareTo(expression-2)
+expression line %integer% (of|from|in|at) %itemstack%:
+    return type: string
+    get:
+        return uncoloured line expression-1 of lore of expression-2 
+expression %string% in lowercase (from|between|at) %integer% [(and|to)] %integer%:
+    return type: string
+    get:
+        set {_count} to 0
+        set {_s::*} to expression-1 split at ""
+        set {_a} to expression-2
+        set {_b} to expression-3
+        loop {_s::*}:
+            increase {_count} by 1
+            if {_count} is greater than ({_a} - 1):
+                if {_count} is less than ({_b} + 1):
+                    set {_this::%loop-index%} to first character of loop-value in lower case
+                else:
+                    set {_this::%loop-index%} to loop-value
+            else:
+                set {_this::%loop-index%} to loop-value
+        set {_result} to ""
+        return {_this::*} as a string
+expression %string% ((in|as) uppercase|capitalized) (from|between|at) %integer% [(and|to)] %integer%:
+    return type: string
+    get:
+        set {_count} to 0
+        set {_s::*} to expression-1 split at ""
+        set {_a} to expression-2
+        set {_b} to expression-3
+        loop {_s::*}:
+            increase {_count} by 1
+            if {_count} is greater than ({_a} - 1):
+                if {_count} is less than ({_b} + 1):
+                    set {_this::%loop-index%} to first character of loop-value in upper case
+                else:
+                    set {_this::%loop-index%} to loop-value
+            else:
+                set {_this::%loop-index%} to loop-value
+        set {_result} to ""
+        loop {_this::*}:
+            set {_result} to "%{_result}%%loop-value%"
+        return {_result}
 
 #SORTING
 
-function sortIndexLowest(s: strings) :: strings:
-    set {_count} to 0 
-    loop size of {_s::*} times:
-        increase {_count} by 1
-        delete {_lowest}
-        loop {_s::*}:
-            set {_this::*} to loop-value-2 split at "-"
-            size of {_this::*} is 2
-            set {_numb} to {_this::2} parsed as a number
-            set {_low::*} to {_lowest} split at "-"
-            set {_number} to {_low::2} parsed as a number
-            if {_lowest} isn't set:
-                set {_lowest} to loop-value-2
-            else if {_numb} is less than {_number}:
-                set {_lowest} to loop-value-2
-        add {_lowest} to {_sorted::*}
-        remove {_lowest} from {_s::*}
-    return {_sorted::*}
-function sortIndexHighest(s: strings) :: strings:
-    set {_count} to 0 
-    loop size of {_s::*} times:
-        increase {_count} by 1
-        delete {_highest}
-        loop {_s::*}:
-            set {_this::*} to loop-value-2 split at "-"
-            set {_numb} to {_this::2} parsed as a number
-            set {_high::*} to {_highest} split at "-"
-            set {_number} to {_high::2} parsed as a number
-            if {_highest} isn't set:
-                set {_highest} to loop-value-2
-            else if {_numb} is greater than {_number}:
-                set {_highest} to loop-value-2
-        add {_highest} to {_sorted::*}
-        remove {_highest} from {_s::*}
-    return {_sorted::*}
-function sortLowest(i: numbers) :: numbers:
-    set {_count} to 0 
-    loop size of {_i::*} times:
-        increase {_count} by 1
-        delete {_lowest}
-        loop {_i::*}:
-            if {_lowest} isn't set:
-                set {_lowest} to loop-value-2
-            else if loop-value-2 is less than {_lowest}:
-                set {_lowest} to loop-value-2
-        add {_lowest} to {_sorted::*}
-        remove {_lowest} from {_i::*}
-    return {_sorted::*}
-function sortHighest(i: numbers) :: numbers:
-    set {_count} to 0 
-    loop size of {_i::*} times:
-        increase {_count} by 1
-        delete {_highest}
-        loop {_i::*}:
-            if {_highest} isn't set:
-                set {_highest} to loop-value-2
-            else if loop-value-2 is greater than {_highest}:
-                set {_highest} to loop-value-2
-        add {_highest} to {_sorted::*}
-        remove {_highest} from {_i::*}
-    return {_sorted::*}
+expression %objects% sorted [(by|with|using|from)] (1¦greatest to least|2¦least to greatest):
+    return type: integers
+    get:
+        set {_i::*} to expressions-1
+        loop size of expressions-1 times:
+            increase {_count} by 1
+            delete {_highest}
+            loop {_i::*}:
+                if {_highest} isn't set:
+                    set {_highest} to loop-value-2
+                if parse mark is 1:
+                    if loop-value-2 is greater than {_highest}:
+                        set {_highest} to loop-value-2
+                else:
+                    if loop-value-2 is less than {_highest}:
+                        set {_highest} to loop-value-2
+            add {_highest} to {_sorted::*}
+            remove {_highest} from {_i::*}
+        return {_sorted::*}         
+
+#REQUIRES WORLD GUARD OR OTHER REGION PLUGIN
+
+condition %entity% is (in|at|inside [of]) region[s] %strings%:
+    check:
+        set {_text} to "%region at expression-1%"
+        replace all "and" in {_text} with ","
+        set {_this::*} to {_text} split at ","
+        loop expressions-2:
+            loop {_this::*}:
+                loop-value-2 is loop-value-1
+                set {_confirm} to true
+            if {_confirm} is true:
+                continue
+condition %entity% (isn't|is not) (in|at|inside [of]) region[s] %strings%:
+    check:
+        set {_text} to "%region at expression-1%"
+        replace all "and" in {_text} with ","
+        set {_this::*} to {_text} split at ","
+        loop expressions-2:
+            loop {_this::*}:
+                loop-value-2 isn't loop-value-1
+                continue
+expression (region[s] of %entity%|%entity%'s regions):
+    get:
+        set {_this::*} to region at expression-1
+        loop {_this::*}:
+            add "%loop-value%" to {_result::*}
+        return {_result::*}
+        
+#REQUIRES A PERMISSION PLUGIN
+
+condition group %string% exists:
+    check:
+        "%all groups%" contains expression-1
+        continue
+
+#DATES AND TIME
+		
+on script load:
+    set {simpleSK.months::*} to "January", "Febuary", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
+expression (day before[ today]|yesterday):
+    get:
+        return 1 day ago
+expression (day after[ today]|tomorrow):
+    get:
+        return 1 day later
+expression current month:
+    get:
+        set {_time} to "%now%"
+        set {_this::*} to {_time} split at "/"
+        set {_now} to {_this::1} parsed as an integer
+        return {simpleSK.months::%{_now}%}
+expression current year:
+    get:
+        set {_time} to "%now%"
+        set {_this::*} to {_time} split at "/"
+        set {_wow::*} to {_this::3} split at " "
+        return "20%{_wow::1}%"
+expression current day of [the] month:
+    get:
+        set {_time} to "%now%"
+        set {_this::*} to {_time} split at "/"
+        return "%{_this::2}%"
+expression [current] real[ ]time:
+    get:
+        set {_time} to "%now%"
+        set {_this::*} to {_time} split at " "
+        return "%{_this::2}% %{_this::3}%"
+expression [current] military time:
+    get:
+        set {_time} to realtime
+        set {_this::*} to {_time} split at " "
+        if "%{_this::2}%" is "PM":
+            set {_times::*} to {_this::1} split at ":"
+            set {_timer} to {_times::1} parsed as an integer
+            increase {_timer} by 12
+            return "%{_timer}%:%{_times::2}%"
+        else:
+            return {_this::1}
+			
+#ARITHMETIC
+
+
+condition %number% can be divided by %number%:
+    check:
+        set {_this} to expression-1 / expression-2
+        "%{_this}%" doesn't contain "."
+        continue
+		
+#BASIC AND INDERMEDIATE ENTITY RELATED EFFECTS, EXPRESSIONS AND CONDITIONS
+		
+expression %player%'s [last] death location:
+    get:
+        return {simpleSK.deathLocation::%expression-1's uuid%}
+on death of a player:
+    set {simpleSK.deathLocation::%player's uuid%} to player's location
+expression (previous|past) names of %offlineplayer%:
+    get:
+        return {simpleSK.names::%expression-1's uuid%::*}
+on join:
+    if {simpleSK.names::%player's uuid%::*} isn't set:
+        add "%player%" to {simpleSK.names::%player's uuid%::*}
+    else if last element of {simpleSK.names::%player's uuid%::*} isn't "%player%":
+        add "%player%" to {simpleSK.names::%player's uuid%::*}
+expression [the] (hit[ten]|collided) block:
+    get:
+        return event.getHitBlock()
+condition %entity% has [(a|an)] AI:
+    check:
+        expression-1.hasAI() is true
+        continue
+effect (1¦enable|2¦disable) %entity%'s AI:
+    trigger:
+        if parse mark is 1:
+            expression-1.setAI(true)
+        else:
+            expression-1.setAI(false)
+condition %entity% can pick up items:
+    check:
+        expression-1.getCanPickupItems() is true
+        continue
+condition %entity% has [(potion|effect)] %potion type%:
+    check:
+        expression-1.hasPotioneffect(expression-2) is true
+        continue
+condition %entity% can be damaged:
+    check:
+        expression-1.isInvulnerable() is true
+        continue   
+condition %entity% can([ ]not|'t) be damaged:
+    check:
+        expression-1.isInvulnerable() isn't true
+        continue           
+condition %entity% does not (speak|make a sound):
+    check:
+        expression-1.isSilent() is true
+        continue
+effect make [the] %entity% (1¦vulnerable|2¦invulnerable|3¦(silent|quiet)||4¦(un|not )(quiet|silent)):
+    trigger:
+        if parse mark is 1:
+            expression-1.setInvulnerable(false)
+        else if parse mark is 2:
+            expression-1.setInvulnerable(true)        
+        else if parse mark is 3:
+            expression-1.setSilent(true)    
+        else:
+            expression-1.setSilent(false)    
+expression (%entity%'s height|height of %entity%):
+    get:
+        return expression-1.getHeight()
+effect eject [all] passengers (from|all) %entity%:
+    trigger:
+        expression-1.eject()
+expression time until %entity% is (no longer|off) (fire|flame[s]):
+    get:
+        return expression-1.getFireTicks()
+expression last damage cause [of] %entity%:
+    get:
+        return expression-1.getLastDamageCause()
+condition %entity% despawns [when players are (around|near) [it]]:
+    check:
+        expression-1.getRemoveWhenFarAway() is true
+        continue
+effect make %entity% [the] (1¦unable|2¦able) to despawn:
+    trigger:
+        if parse mark is 1:
+            expression-1.setRemoveWhenFarAway(false)
+        else:
+            expression-1.setRemoveWhenFarAway(true)
+condition %entity% is leashed:
+    check:
+        expression-1.isLeashed() is true
+        continue
+condition %entity% can be collided with:
+    check:
+        expression-1.isCollidable() is true
+        continue
+expression [event-]reason:
+    get:
+        return event.getReason()
+expression (force of %projectile%|%projectile%'s force):
+    get:
+        return expression-1.getForce()
+condition %projectile% (will|does) bounce:
+    check:
+        projectile.doesBounce() is true
+        continue
+expression (name of [the] event|event's name):
+    get:
+        return event.getEventName()
+expression ticks %entity% has (lived|been (alive|living)) [for]:
+    get:
+        return expression-1.getTicksLived()
+condition %entity% has gravity:
+    check:
+        expression-1.hasGravity() is true
+        continue
+expression (width of %entity%|%entity%'s width):
+    get:
+        return expression-1.getWidth()
+expression %entity%'s fall distance:
+    get:
+        return expression-1.getFallDistance()
+
+expression last [chat] message:
+    get:
+        return {simpleSK.lastMsg}
+expression last [chat] message by %player%:
+    get:
+        return {simpleSK.lastMsg::%expression-1's uuid%}
+on chat:
+    set {simpleSK.lastMsg::%player's uuid%} to message
+    set {simpleSK.lastMsg} to message
+effect make %projectile% hatch [(1¦a[n] %entity type%|2¦%integer% of %entity type%)]:
+    trigger:
+        expression-1 is a egg
+        expression-1.setHatching(true)
+        if expression-2 is set:
+            if parse mark is 1:
+                expression-1.setHatchingType(expression-2)
+            if parse mark is 2:
+                expression-1.setNumHatches(expression-2)
+                expression-1.setHatchingType(expression-3)
+        
+#PROJECTILES
+
+expression %projectile% (does|will) bounce:
+    get:
+        return expression-1.doesBounce()
+effect make %projectile% able to bounce:
+    trigger:
+        expression-1.setBounce(true)    
+effect make %projectile% (un|not )able to bounce:
+    trigger:
+        expression-1.setBounce(false)    
+
+#ATTRIBUTES (BETA)
+
+expression attribute %string% of %entity%:
+    get:
+        set {_this} to Attribute.valueOf(expression-1)
+        set {_value} to expression-2.getAttribute({_this})
+        return {_value}.getBaseValue()
+effect set attribute %string% of %entity% to %double%:
+    trigger:
+        set {_this} to Attribute.valueOf(expression-1)
+        set {_value} to expression-2.getAttribute({_this})
+        expression-1.setBaseValue(expression-3)
