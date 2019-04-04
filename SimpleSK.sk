@@ -20,7 +20,7 @@ on PlayerLoginEvent:
     set {simpleSK::joinIP::%{_person}%::*} to {_this} split at ":"
     set {_this} to event.getRealAddress()
     set {simpleSK::realIP::%{_person}%} to "%{_this}%"
-expression (connect|join) (ip|address) of %player%:
+expression connect[ion] (ip|address) of %player%:
     get:
         return "%{simpleSK::joinIP::%expression-1%::1}%:%{simpleSK::joinIP::%expression-1%::2}%"
 expression port of %player%'s (address|ip):
